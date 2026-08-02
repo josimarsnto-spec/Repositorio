@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, Logger } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -16,6 +16,8 @@ import { LoginResult } from './login.handler';
 // um segundo passo de login manual logo após o cadastro.
 @CommandHandler(RegistrarClienteCommand)
 export class RegistrarClienteHandler implements ICommandHandler<RegistrarClienteCommand> {
+  private readonly logger = new Logger(RegistrarClienteHandler.name);
+
   constructor(
     @InjectRepository(TenantEntity) private readonly tenantRepo: Repository<TenantEntity>,
     @InjectRepository(UsuarioEntity) private readonly usuarioRepo: Repository<UsuarioEntity>,
@@ -72,19 +74,34 @@ export class RegistrarClienteHandler implements ICommandHandler<RegistrarCliente
     // padrão usado em CadastrarCondominioHandler. Sem isso, o frontend não
     // tinha nenhum condominioId real para usar (e endpoints como
     // /condominios/:id/relatorios/financeiro exigem um uuid válido).
-    const [{ id: condominioId }] = await this.usuarioRepo.query(
-      `INSERT INTO condo.condominios (tenant_id, nome, endereco, ativo)
-       VALUES ($1, $2, $3::jsonb, true)
-       RETURNING id`,
-      [tenant.id, tenant.razaoSocial, '{}'],
-    );
+    // Envolvido numa transação explícita (manager.transaction) para garantir
+    // atomicidade entre os dois INSERTs — anteriormente rodavam como duas
+    // queries autocommit separadas via repo.query().
+    let condominioId: string;
+    await this.usuarioRepo.manager.transaction(async (manager) => {
+      const condominioRows: Array<{ id: string }> = await manager.query(
+        `INSERT INTO condo.condominios (tenant_id, nome, endereco, ativo)
+         VALUES ($1, $2, $3::jsonb, true)
+         RETURNING id`,
+        [tenant.id, tenant.razaoSocial, '{}'],
+      );
+      condominioId = condominioRows[0].id;
 
-    await this.usuarioRepo.query(
-      `INSERT INTO identity.usuarios_papeis (usuario_id, condominio_id, papel_id)
-       VALUES ($1, $2, 5)
-       ON CONFLICT (usuario_id, condominio_id, papel_id) DO NOTHING`,
-      [usuario.id, condominioId],
-    );
+      await manager.query(
+        `INSERT INTO identity.usuarios_papeis (usuario_id, condominio_id, papel_id)
+         VALUES ($1, $2, 5)
+         ON CONFLICT (usuario_id, condominio_id, papel_id) DO NOTHING`,
+        [usuario.id, condominioId],
+      );
+
+      const verificacao = await manager.query(
+        `SELECT usuario_id, condominio_id, papel_id FROM identity.usuarios_papeis WHERE usuario_id = $1`,
+        [usuario.id],
+      );
+      this.logger.log(
+        `Vínculo criado no cadastro: usuarioId=${usuario.id} condominioId=${condominioId} linhasEncontradas=${JSON.stringify(verificacao)}`,
+      );
+    });
 
     const payload = { sub: usuario.id, tenantId: tenant.id, papeis: ['ADMIN_TENANT'] };
 
