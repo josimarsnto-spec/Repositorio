@@ -1,7 +1,7 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CommandBus } from '@nestjs/cqrs';
-import { IsEmail, IsString, Length, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, Length, Matches, MinLength } from 'class-validator';
 import { LoginCommand } from '../application/commands/login.command';
 import { RegistrarClienteCommand } from '../application/commands/registrar-cliente.command';
 import { SolicitarRedefinicaoSenhaCommand } from '../application/commands/solicitar-redefinicao-senha.command';
@@ -57,8 +57,6 @@ class RefreshTokenDto {
   @IsNotEmpty()
   refreshToken: string;
 }
-
-import { IsNotEmpty } from 'class-validator';
 
 @ApiTags('auth')
 @Controller('auth')
