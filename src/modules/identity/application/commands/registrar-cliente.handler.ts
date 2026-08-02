@@ -67,9 +67,25 @@ export class RegistrarClienteHandler implements ICommandHandler<RegistrarCliente
       throw err;
     }
 
-    // TODO: vincular usuário ao papel ADMIN_TENANT em identity.usuarios_papeis
-    // assim que o primeiro condomínio for cadastrado (a tabela exige
-    // condominio_id — mesma observação do seed-admin.sql).
+    // Cria um condomínio padrão para o tenant recém-criado e já vincula o
+    // usuário ao papel ADMIN_TENANT (papel_id = 5) nesse condomínio — mesmo
+    // padrão usado em CadastrarCondominioHandler. Sem isso, o frontend não
+    // tinha nenhum condominioId real para usar (e endpoints como
+    // /condominios/:id/relatorios/financeiro exigem um uuid válido).
+    const [{ id: condominioId }] = await this.usuarioRepo.query(
+      `INSERT INTO condo.condominios (tenant_id, nome, endereco, ativo)
+       VALUES ($1, $2, $3::jsonb, true)
+       RETURNING id`,
+      [tenant.id, tenant.razaoSocial, '{}'],
+    );
+
+    await this.usuarioRepo.query(
+      `INSERT INTO identity.usuarios_papeis (usuario_id, condominio_id, papel_id)
+       VALUES ($1, $2, 5)
+       ON CONFLICT (usuario_id, condominio_id, papel_id) DO NOTHING`,
+      [usuario.id, condominioId],
+    );
+
     const payload = { sub: usuario.id, tenantId: tenant.id, papeis: ['ADMIN_TENANT'] };
 
     return {
