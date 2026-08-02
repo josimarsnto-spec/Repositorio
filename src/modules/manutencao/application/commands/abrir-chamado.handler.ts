@@ -21,9 +21,14 @@ export class AbrirChamadoHandler implements ICommandHandler<AbrirChamadoCommand>
     const chamado = this.chamadoRepo.create({ ...command, status: 'ABERTO' });
     const salvo = await this.chamadoRepo.save(chamado);
 
+    const [{ tenant_id }] = await this.chamadoRepo.query(
+      `SELECT tenant_id FROM condo.condominios WHERE id = $1`,
+      [salvo.condominioId],
+    );
+
     await this.outboxRepo.save(
       this.outboxRepo.create({
-        tenantId: 'resolver-a-partir-do-condominio', // TODO: join com condo.condominios.tenant_id
+        tenantId: tenant_id,
         tipoEvento: 'manutencao.ChamadoAberto',
         payload: { chamadoId: salvo.id, condominioId: salvo.condominioId },
         publicado: false,

@@ -23,4 +23,10 @@ export class OutboxEventEntity {
 
   @Column({ name: 'publicado_em', nullable: true })
   publicadoEm?: Date;
+
+  @Column({ default: 0 })
+  tentativas: number;
+
+  @Column({ nullable: true })
+  erro?: string;
 }

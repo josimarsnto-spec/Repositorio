@@ -33,7 +33,7 @@ export class CondominiosController {
   @ApiOperation({ summary: 'Cadastra um novo condomínio (onboarding — UC-11)' })
   async cadastrar(@Body() dto: CadastrarCondominioDto, @CurrentUser() user: AuthenticatedUser) {
     return this.commandBus.execute(
-      new CadastrarCondominioCommand(user.tenantId, dto.nome, dto.endereco),
+      new CadastrarCondominioCommand(user.tenantId, dto.nome, dto.endereco, user.sub),
     );
   }
 

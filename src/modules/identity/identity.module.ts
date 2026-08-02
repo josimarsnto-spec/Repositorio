@@ -14,6 +14,7 @@ import { LoginHandler } from './application/commands/login.handler';
 import { RegistrarClienteHandler } from './application/commands/registrar-cliente.handler';
 import { SolicitarRedefinicaoSenhaHandler } from './application/commands/solicitar-redefinicao-senha.handler';
 import { RedefinirSenhaHandler } from './application/commands/redefinir-senha.handler';
+import { RefreshTokenHandler } from './application/commands/refresh-token.handler';
 import { AuthController } from './interface/auth.controller';
 
 @Module({
@@ -39,6 +40,7 @@ import { AuthController } from './interface/auth.controller';
     RegistrarClienteHandler,
     SolicitarRedefinicaoSenhaHandler,
     RedefinirSenhaHandler,
+    RefreshTokenHandler,
   ],
   exports: [JwtModule],
 })

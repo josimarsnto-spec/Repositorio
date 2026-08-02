@@ -3,5 +3,6 @@ export class CadastrarCondominioCommand {
     public readonly tenantId: string,
     public readonly nome: string,
     public readonly endereco: Record<string, unknown>,
+    public readonly usuarioId: string,
   ) {}
 }

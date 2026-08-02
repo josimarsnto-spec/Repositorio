@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import { OutboxEventEntity } from './outbox-event.entity';
 import { EventPublisherService } from './event-publisher.service';
 import { buildCloudEvent } from './cloud-event.envelope';
@@ -22,7 +22,7 @@ export class OutboxWorkerService {
   @Interval(2000)
   async flushPendingEvents(): Promise<void> {
     const pendentes = await this.outboxRepo.find({
-      where: { publicado: false },
+      where: { publicado: false, tentativas: LessThan(5) },
       take: 100,
       order: { criadoEm: 'ASC' },
     });
@@ -41,7 +41,9 @@ export class OutboxWorkerService {
         await this.outboxRepo.save(evento);
       } catch (err) {
         this.logger.error(`Falha ao publicar evento ${evento.id}`, err as Error);
-        // Mantém publicado=false; próxima execução tenta novamente (at-least-once delivery).
+        evento.tentativas += 1;
+        evento.erro = (err as Error).message;
+        await this.outboxRepo.save(evento);
       }
     }
   }

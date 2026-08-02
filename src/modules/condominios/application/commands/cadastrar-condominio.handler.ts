@@ -20,6 +20,16 @@ export class CadastrarCondominioHandler
       endereco: command.endereco,
       ativo: true,
     });
-    return this.repo.save(condominio);
+    const salvo = await this.repo.save(condominio);
+
+    // Vincula o usuário ao papel ADMIN_TENANT (papel_id = 5) para este novo condomínio
+    await this.repo.query(
+      `INSERT INTO identity.usuarios_papeis (usuario_id, condominio_id, papel_id)
+       VALUES ($1, $2, 5)
+       ON CONFLICT (usuario_id, condominio_id, papel_id) DO NOTHING`,
+      [command.usuarioId, salvo.id],
+    );
+
+    return salvo;
   }
 }

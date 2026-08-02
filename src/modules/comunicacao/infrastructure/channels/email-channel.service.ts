@@ -15,14 +15,14 @@ export class EmailChannelService implements NotificacaoChannel {
   private transporter: nodemailer.Transporter | null = null;
 
   constructor(private readonly config: ConfigService) {
-    const host = this.config.get<string>('SMTP_HOST');
+    const host = this.config.get<string>('smtp.host');
     if (host) {
       this.transporter = nodemailer.createTransport({
         host,
-        port: Number(this.config.get<string>('SMTP_PORT') ?? 587),
-        secure: this.config.get<string>('SMTP_SECURE') === 'true',
-        auth: this.config.get<string>('SMTP_USER')
-          ? { user: this.config.get<string>('SMTP_USER'), pass: this.config.get<string>('SMTP_PASS') }
+        port: this.config.get<number>('smtp.port') ?? 587,
+        secure: this.config.get<boolean>('smtp.secure') ?? false,
+        auth: this.config.get<string>('smtp.user')
+          ? { user: this.config.get<string>('smtp.user') as string, pass: this.config.get<string>('smtp.pass') as string }
           : undefined,
       });
     } else {
@@ -36,11 +36,11 @@ export class EmailChannelService implements NotificacaoChannel {
         destinatarios: destinatarios.length,
         enviados: 0,
         falhas: destinatarios.length,
-        detalhe: 'SMTP não configurado (SMTP_HOST ausente)',
+        detalhe: 'SMTP não configurado (smtp.host ausente)',
       };
     }
 
-    const from = this.config.get<string>('SMTP_FROM') ?? 'no-reply@condosphere.app';
+    const from = this.config.get<string>('smtp.from') ?? 'no-reply@condosphere.app';
     let enviados = 0;
     let falhas = 0;
 

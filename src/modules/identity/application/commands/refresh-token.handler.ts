@@ -3,32 +3,36 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
-import { LoginCommand } from './login.command';
+import { RefreshTokenCommand } from './refresh-token.command';
 import { UsuarioEntity } from '../../domain/usuario.entity';
+import { LoginResult } from './login.handler';
 
-export interface LoginResult {
-  accessToken: string;
-  refreshToken: string;
-}
-
-@CommandHandler(LoginCommand)
-export class LoginHandler implements ICommandHandler<LoginCommand> {
+@CommandHandler(RefreshTokenCommand)
+export class RefreshTokenHandler implements ICommandHandler<RefreshTokenCommand> {
   constructor(
     @InjectRepository(UsuarioEntity)
     private readonly usuarioRepo: Repository<UsuarioEntity>,
     private readonly jwtService: JwtService,
   ) {}
 
-  async execute(command: LoginCommand): Promise<LoginResult> {
-    const { email, senha } = command;
-    const usuario = await this.usuarioRepo.findOne({ where: { email, ativo: true } });
-    if (!usuario) throw new UnauthorizedException('Credenciais inválidas');
+  async execute(command: RefreshTokenCommand): Promise<LoginResult> {
+    const { refreshToken } = command;
 
-    const senhaValida = await bcrypt.compare(senha, usuario.senhaHash);
-    if (!senhaValida) throw new UnauthorizedException('Credenciais inválidas');
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(refreshToken);
+    } catch (err) {
+      throw new UnauthorizedException('Token de atualização inválido ou expirado');
+    }
 
-    // Carregar papéis reais via identity.usuarios_papeis
+    const usuario = await this.usuarioRepo.findOne({
+      where: { id: payload.sub, ativo: true },
+    });
+    if (!usuario) {
+      throw new UnauthorizedException('Usuário inativo ou não encontrado');
+    }
+
+    // Carregar papéis reais
     const userRoles = await this.usuarioRepo.query(
       `SELECT up.condominio_id as "condominioId", p.codigo 
        FROM identity.usuarios_papeis up 
@@ -50,15 +54,15 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
       }
     }
 
-    const payload = {
+    const newPayload = {
       sub: usuario.id,
       tenantId: usuario.tenantId,
       papeis: rolesList,
     };
 
     return {
-      accessToken: this.jwtService.sign(payload, { expiresIn: '15m' }),
-      refreshToken: this.jwtService.sign(payload, { expiresIn: '7d' }),
+      accessToken: this.jwtService.sign(newPayload, { expiresIn: '15m' }),
+      refreshToken: this.jwtService.sign(newPayload, { expiresIn: '7d' }),
     };
   }
 }

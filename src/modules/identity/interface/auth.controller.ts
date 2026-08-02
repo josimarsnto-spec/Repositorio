@@ -1,8 +1,6 @@
-import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CommandBus } from '@nestjs/cqrs';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
 import { IsEmail, IsString, Length, Matches, MinLength } from 'class-validator';
 import { LoginCommand } from '../application/commands/login.command';
 import { RegistrarClienteCommand } from '../application/commands/registrar-cliente.command';
@@ -65,25 +63,7 @@ import { IsNotEmpty } from 'class-validator';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly commandBus: CommandBus,
-    @InjectDataSource() private readonly dataSource: DataSource,
-  ) {}
-
-  // DEBUG TEMPORÁRIO — investigando por que INSERT em identity.usuarios_papeis
-  // feito em registrar-cliente.handler.ts não aparece em consultas de conexões
-  // separadas (login minutos depois). Remover assim que diagnosticado.
-  @Get('_debug-papeis')
-  async debugPapeis() {
-    const rows = await this.dataSource.query(
-      `SELECT usuario_id, condominio_id, papel_id, criado_em
-       FROM identity.usuarios_papeis
-       ORDER BY criado_em DESC
-       LIMIT 20`,
-    );
-    const poolInfo = await this.dataSource.query(`SELECT current_database(), inet_server_addr()::text as host, pg_backend_pid() as pid`);
-    return { rows, poolInfo };
-  }
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post('login')
   @HttpCode(200)

@@ -416,7 +416,9 @@ CREATE TABLE auditoria.eventos_dominio_outbox (
     payload         jsonb NOT NULL,
     publicado       boolean NOT NULL DEFAULT false,
     criado_em       timestamptz NOT NULL DEFAULT now(),
-    publicado_em    timestamptz
+    publicado_em    timestamptz,
+    tentativas      integer NOT NULL DEFAULT 0,
+    erro            text
 );
 COMMENT ON TABLE auditoria.eventos_dominio_outbox IS
   'Transactional Outbox: garante publicação confiável de eventos de domínio no RabbitMQ (evita dual-write).';
