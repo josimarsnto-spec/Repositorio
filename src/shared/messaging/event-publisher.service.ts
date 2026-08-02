@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { RABBITMQ_CLIENT } from './rabbitmq.module';
+import { RABBITMQ_CLIENT } from './rabbitmq.constants';
 import { CloudEventEnvelope } from './cloud-event.envelope';
 
 // Publica eventos já persistidos na tabela outbox (auditoria.eventos_dominio_outbox).

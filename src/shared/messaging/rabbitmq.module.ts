@@ -6,8 +6,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventPublisherService } from './event-publisher.service';
 import { OutboxWorkerService } from './outbox-worker.service';
 import { OutboxEventEntity } from './outbox-event.entity';
+import { RABBITMQ_CLIENT } from './rabbitmq.constants';
 
-export const RABBITMQ_CLIENT = 'RABBITMQ_CLIENT';
+export { RABBITMQ_CLIENT };
 
 // Barramento de eventos (Event-Driven Architecture — Documento de Arquitetura, seção 2.2).
 // Exchange topic única com routing key = tipo do evento (ex. financeiro.BoletoGerado),
